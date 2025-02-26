@@ -1,20 +1,36 @@
 #include <pmdsky.h>
 #include <cot.h>
 
-// Remove the comment in patches/patch.asm to enable this example patch.
-// `attribute((used))` is required to prevent the compiler from optimizing out the function
-// if it's only used in a patch.
-__attribute__((used)) int CustomGetMovePower(struct entity* entity, struct move* move) {
-  // Randomize move power
-  int rolledPower = RandRange(1, 100);
+typedef struct
+{
+  int kind;
+  short song_id;
+  short volume;
+  short duration;
+  short pan;
+} audio_command_t;
 
-  // Print the rolled value to the message log
-  char messageBuffer[32];
-  snprintf(messageBuffer, 32, "Rolled move power %d!", rolledPower);
-  
-  LogMessage(entity, messageBuffer, true);
+audio_command_t g_pending_command = {0};
 
-  return rolledPower;
+void (*send_audio_command)(audio_command_t *command) = 0x02018c44;
+
+__attribute__((noinline)) void poll_audio_command(audio_command_t *out_command)
+{
+  // this functions is hooked from the emulator side
+  // and will write the audio command to *out_command
+
+  COT_LOGFMT("AudioEmulator", "poll_audio_command(%x)", out_command);
 }
 
-// You can add other patches here...
+__attribute__((used)) void flush_audio_commands(void)
+{
+  poll_audio_command(&g_pending_command);
+
+  while (g_pending_command.kind != 0)
+  {
+    COT_LOGFMT("AudioEmulator", "send_audio_command(%d)", g_pending_command.kind);
+    send_audio_command(&g_pending_command);
+    g_pending_command.kind = 0;
+    poll_audio_command(&g_pending_command);
+  }
+}
