@@ -182,7 +182,7 @@ patch: build
 
 .PHONY: asmdump
 asmdump: build
-	arm-none-eabi-objdump -S -d $(OUTPUT).elf > $(OUTPUT).asm
+	arm-none-eabi-objdump -d $(OUTPUT).elf > $(OUTPUT).asm
 
 .PHONY: headers
 headers:
